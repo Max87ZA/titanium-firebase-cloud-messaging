@@ -514,10 +514,15 @@ echo $accessToken;
 ?>
 ```
 to your ftp, same folder as your service_account.json file. Load that php and get authorization token.
+
 Now it's just xhr:
+
 url: POST, https://fcm.googleapis.com/v1/projects/your-project-name/messages:send
+
 auth: Bearer token taken from PHP
+
 body: 
+
 ```json
 {
     "message":{
@@ -556,6 +561,8 @@ body:
 }
 ```
 message.token - token from FCM module, notification is sent to one device/array of devices only
+
+
 message.topic - subscribed topic name, notification is sent to all devices subscribed
 
 
