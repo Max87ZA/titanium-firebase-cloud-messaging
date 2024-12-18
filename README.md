@@ -451,8 +451,11 @@ Ti.App.addEventListener('resumed', function() {
 
 Check https://firebase.google.com/docs/cloud-messaging/server or frameworks like https://github.com/kreait/firebase-php/
 
-## REST API
-Firstly, you need to set up your service account via Firebase console, download json and upload it to your ftp. Next, use this code:
+### REST API
+Firstly, you need to set up your service account via Firebase console, download json and upload it to your server. 
+
+To generate your access token use the following PHP file example:
+
 ```php
 <?php
 $serviceAccountKeyPath = 'your_serviceAccount.json';
@@ -513,9 +516,9 @@ $accessToken = generateAccessToken();
 echo $accessToken;
 ?>
 ```
-to your ftp, same folder as your service_account.json file. Load that php and get authorization token.
+Upload it to your server, same folder as your service_account.json file. Load that php and get authorization token.
 
-Now it's just xhr:
+Finally, you can send an API request like this:
 
 url: POST, https://fcm.googleapis.com/v1/projects/your-project-name/messages:send
 
@@ -564,6 +567,7 @@ message.token - token from FCM module, notification is sent to one device/array 
 
 
 message.topic - subscribed topic name, notification is sent to all devices subscribed
+
 
 
 ## Parse
