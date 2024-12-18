@@ -451,6 +451,114 @@ Ti.App.addEventListener('resumed', function() {
 
 Check https://firebase.google.com/docs/cloud-messaging/server or frameworks like https://github.com/kreait/firebase-php/
 
+## REST API
+Firstly, you need to set up your service account via Firebase console, download json and upload it to your ftp. Next, use this code:
+```php
+<?php
+$serviceAccountKeyPath = 'your_serviceAccount.json';
+
+// Function to generate Bearer token using service account credentials
+function generateAccessToken()
+{
+    $serviceAccountKeyPath = __DIR__ . '/your_serviceAccount.json';
+
+    $serviceAccount = json_decode(file_get_contents($serviceAccountKeyPath), true);
+    $privateKey = $serviceAccount['private_key'];
+    $clientEmail = $serviceAccount['client_email'];
+
+    $header = base64url_encode(json_encode([
+        'alg' => 'RS256',
+        'typ' => 'JWT',
+    ]));
+
+    $now = time();
+    $payload = base64url_encode(json_encode([ 
+        'iss' => $clientEmail,
+        'scope' => 'https://www.googleapis.com/auth/firebase.messaging',
+        'aud' => 'https://oauth2.googleapis.com/token',
+        'iat' => $now,
+        'exp' => $now + 3600,
+    ]));
+
+    $jwtToSign = $header . '.' . $payload;
+    openssl_sign($jwtToSign, $signature, $privateKey, 'SHA256');
+    $jwtSignature = base64url_encode($signature);
+
+    $jwt = $jwtToSign . '.' . $jwtSignature;
+
+    $curl = curl_init();
+    curl_setopt_array($curl, [
+        CURLOPT_URL => 'https://oauth2.googleapis.com/token',
+        CURLOPT_RETURNTRANSFER => true,
+        CURLOPT_POST => true,
+        CURLOPT_POSTFIELDS => http_build_query([
+            'grant_type' => 'urn:ietf:params:oauth:grant-type:jwt-bearer',
+            'assertion' => $jwt,
+        ]),
+        CURLOPT_HTTPHEADER => ['Content-Type: application/x-www-form-urlencoded'],
+    ]);
+
+    $response = curl_exec($curl);
+    curl_close($curl);
+
+    $tokenData = json_decode($response, true);
+
+    return $tokenData['access_token'];
+}
+function base64url_encode($data)
+{
+    return rtrim(strtr(base64_encode($data), '+/', '-_'), '=');
+}
+$accessToken = generateAccessToken();
+echo $accessToken;
+?>
+```
+to your ftp, same folder as your service_account.json file. Load that php and get authorization token.
+Now it's just xhr:
+url: POST, https://fcm.googleapis.com/v1/projects/your-project-name/messages:send
+auth: Bearer token taken from PHP
+body: 
+```json
+{
+    "message":{
+        "token": "dZ8W2DrrRcOEbm9T7Qjqgq:APA91bFlPOyVbzIfHR7RsNTW4VU6XoQId_NW1DjImZ88SFXE6lFr86W1irctENzWmoy8fwzOYvi_dFiRi3IbxalbMAY4lY6oJ9gMHZI1LgDjJJdeb6B_CwQ",
+        "data": {
+            "type": "type"
+        },
+        
+        "apns":{
+            "payload":{
+                "aps": {
+		    "title": "Title showed in Notification center",
+                    "alert": "Alert in Notification center",
+                    "badge": 1,
+                    "sound":"push.caf", // put your caf into assets/sounds
+                    "icon":"icon",
+                    "custom_field": {
+                        "type": "type" //your custom data
+                    }
+                }
+            }
+        },
+		"android": 
+		{
+			"data":
+			{
+				"channelId": "your_notification_channel_name",
+				"title": "Title showed in Notification center",
+				"sound":"push",
+				"body": "body", 
+				"alert": "Alert in Notification center"
+				"url_to_load": "titaniumsdk.com" //your custom data
+			}
+		}
+    }
+}
+```
+message.token - token from FCM module, notification is sent to one device/array of devices only
+message.topic - subscribed topic name, notification is sent to all devices subscribed
+
+
 ## Parse
 
 You can use Parse with this module: https://github.com/timanrebel/Parse/pull/59 in combination with Firebase. You include and configure both modules and send your deviceToken to the Parse backend.
